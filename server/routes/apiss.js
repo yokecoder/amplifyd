@@ -44,11 +44,7 @@ router.get('/info', async (req, res) => {
 });
 
 
-
-
-
-
-// Array of RapidAPI keys
+// RapidAPI keys rotation
 const streamApiKeys = [
   process.env.YTAPIKEY1,
   process.env.YTAPIKEY2,
@@ -56,55 +52,79 @@ const streamApiKeys = [
   process.env.YTAPIKEY4,
   process.env.YTAPIKEY5,
 ];
+
 let currentKeyIndex = 0;
-// Function to rotate API keys
 const getNextApiKey = () => {
   const key = streamApiKeys[currentKeyIndex];
   currentKeyIndex = (currentKeyIndex + 1) % streamApiKeys.length;
   return key;
 };
 
-
+// Timeout in ms
+const REQUEST_TIMEOUT = 10000;
 
 router.get('/stream', async (req, res) => {
   const { id } = req.query;
-
-  if (!id) {
-    return res.status(400).json({ error: 'Video ID is required' });
-  }
+  if (!id) return res.status(400).json({ error: 'Video ID is required' });
 
   try {
-    // Step 1: Fetch download info from RapidAPI
-    const { data } = await axios.get('https://yt-api.p.rapidapi.com/dl', {
-      params: { id, cgeo: 'IN' },
-      headers: {
-        'x-rapidapi-key': getNextApiKey(),
-        'x-rapidapi-host': 'yt-api.p.rapidapi.com',
-      },
-      timeout: 10000, // 10 seconds timeout
-    });
+    // Step 1: Fetch video formats from RapidAPI with retry on 403/429
+    let data;
+    let attempts = 0;
+    const maxAttempts = streamApiKeys.length;
+
+    while (attempts < maxAttempts) {
+      try {
+        const response = await axios.get('https://yt-api.p.rapidapi.com/dl', {
+          params: { id, cgeo: 'IN' },
+          headers: {
+            'x-rapidapi-key': getNextApiKey(),
+            'x-rapidapi-host': 'yt-api.p.rapidapi.com',
+          },
+          timeout: REQUEST_TIMEOUT,
+        });
+        data = response.data;
+        break; // success
+      } catch (err) {
+        if (err.response?.status === 403 || err.response?.status === 429) {
+          console.warn(`API key limit reached, switching key... (${attempts + 1})`);
+          attempts++;
+        } else {
+          throw err; // other errors
+        }
+      }
+    }
 
     if (!data?.formats?.length) {
       return res.status(404).json({ error: 'No available formats found', data });
     }
 
-    // Choose the first available format
     const fileUrl = data.formats[0].url;
-    if (!fileUrl) {
-      return res.status(404).json({ error: 'Audio URL not found', data });
-    }
+    if (!fileUrl) return res.status(404).json({ error: 'Audio URL not found', data });
 
-    // Step 2: Stream the audio to the client
-    const streamResponse = await axios.get(fileUrl, { responseType: 'stream' });
+    // Step 2: Stream the audio safely
+    const streamResponse = await axios.get(fileUrl, {
+      responseType: 'stream',
+      timeout: REQUEST_TIMEOUT,
+      headers: { 'User-Agent': 'Mozilla/5.0' }, // Prevent cloud blocking
+    });
 
-    // Set proper headers for audio streaming
+    // Minimal headers for audio streaming
     res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Content-Length', streamResponse.headers['content-length'] || 0);
+    if (streamResponse.headers['content-length']) {
+      res.setHeader('Content-Length', streamResponse.headers['content-length']);
+    }
     res.setHeader('Connection', 'keep-alive');
 
-    // Pipe the audio stream
+    // Handle client disconnect
+    req.on('close', () => {
+      streamResponse.data.destroy();
+    });
+
+    // Pipe the audio
     streamResponse.data.pipe(res);
 
+    // Handle stream errors
     streamResponse.data.on('error', (err) => {
       console.error('Stream error:', err);
       if (!res.headersSent) {
@@ -113,13 +133,14 @@ router.get('/stream', async (req, res) => {
     });
   } catch (err) {
     console.error('Request error:', err.response?.data || err.message);
-    res.status(err.response?.status || 500).json({
-      error: 'Failed to fetch and stream audio',
-      message: err.response?.data || err.message,
-    });
+    if (!res.headersSent) {
+      res.status(err.response?.status || 500).json({
+        error: 'Failed to fetch and stream audio',
+        message: err.response?.data || err.message,
+      });
+    }
   }
 });
-
 
 module.exports = router;
 
