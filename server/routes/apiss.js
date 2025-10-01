@@ -44,39 +44,9 @@ router.get('/info', async (req, res) => {
 });
 
 
-/*router.get('/stream', async (req, res) => {
-  const { id } = req.query; // YouTube video ID
-
-  if (!id) {
-    return res.status(400).json({ error: 'Video ID is required' });
-  }
-
-  try {
-    const response = await axios.get('https://yt-api.p.rapidapi.com/dl', {
-      params: { id, cgeo: 'IN' }, // country code optional
-      headers: {
-        'x-rapidapi-key': '13107244c6mshfcb3037af722f60p1e22f0jsn56b9a0b9d6e5', // replace with your key
-        'x-rapidapi-host': 'yt-api.p.rapidapi.com',
-      },
-    });
-    const data = response.data;
-    if (data) {
-      res.redirect(data.formats[0].url);
-    } else {
-      res.status(500).json({ error: 'Audio URL not found', data });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      error: 'Failed to fetch audio from RapidAPI',
-      message: err.message,
-    });
-  }
-});
-*/
 
 
-const router = express.Router();
+
 
 // Array of RapidAPI keys
 const streamApiKeys = [
@@ -86,15 +56,15 @@ const streamApiKeys = [
   process.env.YTAPIKEY4,
   process.env.YTAPIKEY5,
 ];
-
 let currentKeyIndex = 0;
-
 // Function to rotate API keys
 const getNextApiKey = () => {
   const key = streamApiKeys[currentKeyIndex];
   currentKeyIndex = (currentKeyIndex + 1) % streamApiKeys.length;
   return key;
 };
+
+
 
 router.get('/stream', async (req, res) => {
   const { id } = req.query;
@@ -150,4 +120,8 @@ router.get('/stream', async (req, res) => {
   }
 });
 
-export default router;
+
+module.exports = router;
+
+
+
