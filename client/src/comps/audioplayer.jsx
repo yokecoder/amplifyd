@@ -74,8 +74,8 @@ export default function AudioPlayer({ trackId }) {
     <>
       {/* Hidden audio element */}
       <audio ref={trackRef} style={{ display: "none" }}>
-        <source src={`http://localhost:3000/apiss/stream?id=${trackId}`} type="audio/mpeg" />
-      </audio>
+      <source src={`http://localhost:3000/apiss/stream?id=${trackId}`} type="audio/mpeg" />
+</audio>
     
       {/* Player UI */}
       {isMiniPlayer ? (

@@ -45,98 +45,81 @@ router.get('/info', async (req, res) => {
 
 
 // RapidAPI keys rotation
-const streamApiKeys = [
-  process.env.YTAPIKEY1,
-  process.env.YTAPIKEY2,
-  process.env.YTAPIKEY3,
-  process.env.YTAPIKEY4,
-  process.env.YTAPIKEY5,
-];
-
-let currentKeyIndex = 0;
-const getNextApiKey = () => {
-  const key = streamApiKeys[currentKeyIndex];
-  currentKeyIndex = (currentKeyIndex + 1) % streamApiKeys.length;
-  return key;
-};
-
-// Timeout in ms
-const REQUEST_TIMEOUT = 10000;
-
-router.get('/stream', async (req, res) => {
+router.get("/stream", async (req, res) => {
   const { id } = req.query;
-  if (!id) return res.status(400).json({ error: 'Video ID is required' });
+  if (!id) {
+    return res.status(400).json({ error: "Video ID is required" });
+  }
+
+  // ✅ API keys and index moved INSIDE the route
+  const apiKeys = [
+    process.env.YTAPIKEY1,
+    process.env.YTAPIKEY2,
+    process.env.YTAPIKEY3,
+    process.env.YTAPIKEY4,
+    process.env.YTAPIKEY5,
+  ];
+  let currentKeyIndex = 0;
+  const TIMEOUT = 10000;
 
   try {
-    // Step 1: Fetch video formats from RapidAPI with retry on 403/429
     let data;
     let attempts = 0;
-    const maxAttempts = streamApiKeys.length;
 
-    while (attempts < maxAttempts) {
+    while (attempts < apiKeys.length) {
       try {
-        const response = await axios.get('https://yt-api.p.rapidapi.com/dl', {
-          params: { id, cgeo: 'IN' },
+        const response = await axios.get("https://yt-api.p.rapidapi.com/dl", {
+          params: { id, cgeo: "IN" },
           headers: {
-            'x-rapidapi-key': getNextApiKey(),
-            'x-rapidapi-host': 'yt-api.p.rapidapi.com',
+            "x-rapidapi-key": apiKeys[currentKeyIndex],
+            "x-rapidapi-host": "yt-api.p.rapidapi.com",
           },
-          timeout: REQUEST_TIMEOUT,
+          timeout: TIMEOUT,
         });
+
         data = response.data;
-        break; // success
+        break;
       } catch (err) {
-        if (err.response?.status === 403 || err.response?.status === 429) {
-          console.warn(`API key limit reached, switching key... (${attempts + 1})`);
+        const status = err.response?.status;
+        if (status === 403 || status === 429) {
+          currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
           attempts++;
-        } else {
-          throw err; // other errors
+          continue;
         }
+        throw err;
       }
     }
 
     if (!data?.formats?.length) {
-      return res.status(404).json({ error: 'No available formats found', data });
+      return res.status(404).json({ error: "No formats found" });
     }
 
     const fileUrl = data.formats[0].url;
-    if (!fileUrl) return res.status(404).json({ error: 'Audio URL not found', data });
-
-    // Step 2: Stream the audio safely
-    const streamResponse = await axios.get(fileUrl, {
-      responseType: 'stream',
-      timeout: REQUEST_TIMEOUT,
-      headers: { 'User-Agent': 'Mozilla/5.0' }, // Prevent cloud blocking
-    });
-
-    // Minimal headers for audio streaming
-    res.setHeader('Content-Type', 'audio/mpeg');
-    if (streamResponse.headers['content-length']) {
-      res.setHeader('Content-Length', streamResponse.headers['content-length']);
+    if (!fileUrl) {
+      return res.status(404).json({ error: "Audio URL not found" });
     }
-    res.setHeader('Connection', 'keep-alive');
 
-    // Handle client disconnect
-    req.on('close', () => {
-      streamResponse.data.destroy();
+    const streamResponse = await axios.get(fileUrl, {
+      responseType: "stream",
+      timeout: TIMEOUT,
+      headers: { "User-Agent": "Mozilla/5.0" },
     });
 
-    // Pipe the audio
+    res.setHeader("Content-Type", "audio/mpeg");
+    if (streamResponse.headers["content-length"]) {
+      res.setHeader("Content-Length", streamResponse.headers["content-length"]);
+    }
+    res.setHeader("Connection", "keep-alive");
+
+    req.on("close", () => streamResponse.data.destroy());
+
     streamResponse.data.pipe(res);
-
-    // Handle stream errors
-    streamResponse.data.on('error', (err) => {
-      console.error('Stream error:', err);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Error streaming audio', message: err.message });
-      }
-    });
   } catch (err) {
-    console.error('Request error:', err.response?.data || err.message);
+    console.error("Streaming error:", err.message);
     if (!res.headersSent) {
-      res.status(err.response?.status || 500).json({
-        error: 'Failed to fetch and stream audio',
-        message: err.response?.data || err.message,
+      res.status(500).json({
+        error: "Failed to stream audio",
+        message: err.message,
       });
     }
   }
