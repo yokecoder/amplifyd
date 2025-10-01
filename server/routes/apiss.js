@@ -75,78 +75,79 @@ router.get('/info', async (req, res) => {
 });
 */
 
+
+const router = express.Router();
+
+// Array of RapidAPI keys
+const streamApiKeys = [
+  process.env.YTAPIKEY1,
+  process.env.YTAPIKEY2,
+  process.env.YTAPIKEY3,
+  process.env.YTAPIKEY4,
+  process.env.YTAPIKEY5,
+];
+
+let currentKeyIndex = 0;
+
+// Function to rotate API keys
+const getNextApiKey = () => {
+  const key = streamApiKeys[currentKeyIndex];
+  currentKeyIndex = (currentKeyIndex + 1) % streamApiKeys.length;
+  return key;
+};
+
 router.get('/stream', async (req, res) => {
-  const { id } = req.query; // YouTube video ID
-
-  const streamApiKeys = [
-    process.env.YTAPIKEY1,
-    process.env.YTAPIKEY2,
-    process.env.YTAPIKEY3,
-    process.env.YTAPIKEY4,
-    process.env.YTAPIKEY5,
-  ]
-  var currentKeyIdx = 0
-
-  function getNextApiKey() {
-    const key = streamApiKeys[currentKeyIdx];
-    currentKeyIdx = (currentKeyIdx + 1) % streamApiKeys.length;
-    return key;
-  }
+  const { id } = req.query;
 
   if (!id) {
     return res.status(400).json({ error: 'Video ID is required' });
   }
 
   try {
-  // Step 1: Get the actual download URL from RapidAPI
-    const response = await axios.get('https://yt-api.p.rapidapi.com/dl', {
-    params: { id, cgeo: 'IN' },
-    headers: {
-    'x-rapidapi-key': `${getNextApiKey()}`,
-    'x-rapidapi-host': 'yt-api.p.rapidapi.com',
-    },
-  });
+    // Step 1: Fetch download info from RapidAPI
+    const { data } = await axios.get('https://yt-api.p.rapidapi.com/dl', {
+      params: { id, cgeo: 'IN' },
+      headers: {
+        'x-rapidapi-key': getNextApiKey(),
+        'x-rapidapi-host': 'yt-api.p.rapidapi.com',
+      },
+      timeout: 10000, // 10 seconds timeout
+    });
 
-  const data = response.data;  
+    if (!data?.formats?.length) {
+      return res.status(404).json({ error: 'No available formats found', data });
+    }
 
-  if (!data || !data.formats || data.formats.length === 0) {  
-    return res.status(500).json({ error: 'Audio URL not found', data });  
-  }  
+    // Choose the first available format
+    const fileUrl = data.formats[0].url;
+    if (!fileUrl) {
+      return res.status(404).json({ error: 'Audio URL not found', data });
+    }
 
-  const fileUrl = data.formats[0].url;  
-  
-  // Step 2: Stream the content to the frontend  
-  const streamResponse = await axios.get(fileUrl, { responseType: 'stream' });  
+    // Step 2: Stream the audio to the client
+    const streamResponse = await axios.get(fileUrl, { responseType: 'stream' });
 
-// Set headers for streaming  
-  res.setHeader('Content-Type', 'audio/mpeg');  
-  res.setHeader('Content-Length', streamResponse.headers['content-length'] || 0);  
-  res.setHeader('Connection', 'Keep-Alive')
-// Pipe the stream to the client  
-  streamResponse.data.pipe(res);
+    // Set proper headers for audio streaming
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Length', streamResponse.headers['content-length'] || 0);
+    res.setHeader('Connection', 'keep-alive');
 
+    // Pipe the audio stream
+    streamResponse.data.pipe(res);
+
+    streamResponse.data.on('error', (err) => {
+      console.error('Stream error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Error streaming audio', message: err.message });
+      }
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({
-    error: 'Failed to fetch and stream audio',
-    message: err.message,
-  });
+    console.error('Request error:', err.response?.data || err.message);
+    res.status(err.response?.status || 500).json({
+      error: 'Failed to fetch and stream audio',
+      message: err.response?.data || err.message,
+    });
   }
-  });
+});
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-module.exports = router;
+export default router;
