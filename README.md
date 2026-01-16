@@ -8,6 +8,7 @@ alternatives:
 https://playnow-murex.vercel.app
 
 Author: Yokesh K
+
 Description: 
  >>> Playnow is a web based multimedia streaming app totally free to use
      provides seamless multimedia streaming experience 
