@@ -1,5 +1,4 @@
 const express = require("express");
-const apiss = require("./routes/apiss.js");
 const cors = require("cors");
 require("dotenv").config();
 
@@ -17,8 +16,7 @@ app.use(
         methods: ["GET", "POST", "PUT", "DELETE"]
     })
 );
-
-app.use("/apiss", apiss)
+   
 // Root endpoint
 app.get("/", (req, res) => {
     res.send("Amplifyd --- Feel Every Beat");

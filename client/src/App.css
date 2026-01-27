@@ -229,12 +229,9 @@ p {
   gap: 15px;
   padding: 10px 0;
   overflow-x: scroll;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
 }
 
-.explore-section .carousel::-webkit-scrollbar { display: none; }
+
 
 .carousel-card-1 {
   min-width: 150px; /* ensure horizontal scrollability */
@@ -386,4 +383,10 @@ p {
 }
 .mini-player .icon {
   font-size: 28px;
+}
+.HomeExplorePage {
+  margin-top: 20px;
+  display:flex;
+  flex-direction: column;
+  width: 100%;
 }
