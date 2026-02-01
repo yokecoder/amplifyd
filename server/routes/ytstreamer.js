@@ -1,10 +1,12 @@
 const express = require('express');
-const env = require('dotenv').config();
+
 const router = express.Router();
 const axios = require('axios');
+require("dotenv").config({
+    path: `.env.${process.env.NODE_ENV || "development"}`
+});
 
-
-const YTAPIKEY = env.parsed.YTAPIKEY1;
+const YTAPIKEY = process.env.YTAPIKEY1;
 
 
 router.get('/info/:videoId', async (req, res) => {
