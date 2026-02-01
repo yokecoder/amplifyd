@@ -266,7 +266,7 @@ p {
   transition: var(--transition);
   position: fixed!important;
   top: 0 ;
-  height: 85vh ;
+  height: 90vh ;
   width: 100%;
   margin-top: 30px;
   gap: 30px;
@@ -309,8 +309,8 @@ p {
 }
 .audioplayer .icon-btn-top {
   position: fixed;
-  top: 40px ;
-  right: 0 ;
+  top: 70px ;
+  right: 70px ;
   margin-bottom: 10px;
   color: var(--text-color) !important;
   font-size: 50px !important;
@@ -321,7 +321,7 @@ p {
 }
 .audioplayer .icon {
   color: inherit;
-  font-size: 60px !important;
+  font-size: 48px !important;
 }
 .mini-player {
   background-color: var(--background-color) ;
@@ -344,7 +344,7 @@ p {
   object-fit: cover;
   height: 50px ;
   width: 50px ;
-  border-radius: 6px;
+  border-radius: 12px;
 }
 .mini-info {
   display: flex;
@@ -357,7 +357,7 @@ p {
   overflow: hidden;
 }
 .mini-info .title {
-  font-size: 15px;
+  font-size: 14px;
   animation: marquee-title 10s linear infinite;
 }
 @keyframes marquee-title {
@@ -370,7 +370,7 @@ p {
 }
 
 .mini-info .author {
-  font-size: 15px ;
+  font-size: 14px ;
 }
 .mini-player .controls {
   display: flex ;
@@ -382,7 +382,7 @@ p {
   font-size: 18px !important;
 }
 .mini-player .icon {
-  font-size: 28px;
+  font-size: 29px;
 }
 .HomeExplorePage {
   margin-top: 20px;
