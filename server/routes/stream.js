@@ -27,7 +27,14 @@ router.get('/info/:videoId', async (req, res) => {
       return res.status(404).json({ error: 'Video not found' });
     }
 
-    res.json(data.items[0]);
+    res.json({
+      id: data.items[0].id,
+      thumbnails: data.items[0].snippet.thumbnails,
+      title: data.items[0].snippet.title,
+      description: data.items[0].snippet.description,
+      channelTitle: data.items[0].snippet.channelTitle,
+      duration: data.items[0].contentDetails.duration,
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch video info' });
   }

@@ -32,7 +32,7 @@ export default function EmbedPlayer({trackId}) {
 
     const fetchVideoInfo = async (videoId) => {
         try {
-            const response = await fetch(`${API}ytstream/info/${videoId}`);
+            const response = await fetch(`${API}api/info/${videoId}`);
             const data = await response.json();
             setVideoInfo(data);
         } catch (error) {
