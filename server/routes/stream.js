@@ -1,12 +1,11 @@
 const { Router} = require("express");
 const axios = require("axios")
 const router = Router();
+const { getRandomApiKey } = require("../utils/getApiKey");
 
 require('dotenv').config();
 
-const getYtApiKey = () => {
-  return process.env.YTAPIKEY1;
-}   
+
 
 router.get('/info/:videoId', async (req, res) => {
   try {
@@ -18,7 +17,7 @@ router.get('/info/:videoId', async (req, res) => {
         params: {
           part: 'snippet,contentDetails,statistics',
           id: videoId,
-          key: getYtApiKey(),
+          key: getRandomApiKey(),
         }
       }
     );
@@ -38,6 +37,30 @@ router.get('/info/:videoId', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch video info' });
   }
+});
+
+
+router.get("/search", async (req,res)=>{
+  try {
+    const {q} = req.query;
+    const {data} = await  axios.get(
+      'https://www.googleapis.com/youtube/v3/search',
+      {
+        params: {
+          part: 'snippet',
+          q: q,
+          type: 'video,playlist',
+          maxResults: 10,
+          key: getRandomApiKey(),
+        }
+      }
+    );  
+    res.json(data)
+  }
+  catch(err){
+    res.status(500).json({ error: 'Failed to fetch search results' });
+  }
+
 });
 
 module.exports = router;

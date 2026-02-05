@@ -229,13 +229,14 @@ p {
   gap: 15px;
   padding: 10px 0;
   overflow-x: scroll;
+  overflow-y: hidden;
 }
 
 
 
 .carousel-card-1 {
-  min-width: 150px; /* ensure horizontal scrollability */
-  min-height: 120px;
+  min-width: 200px; /* ensure horizontal scrollability */
+  height: 180px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -247,15 +248,20 @@ p {
 }
 
 .carousel-card-1 .carousel-card-img {
-  height: 100px;
-  width: 150px;
+  height: 80px;
+  width: inherit;
   object-fit: cover;
   border-radius: 10px;
 }
 
 .carousel-card-1 .card-info { display: flex; flex-direction: column; }
 .carousel-card-1 .card-title { font-size: 14px; text-wrap: nowrap; overflow: hidden; }
-.carousel-card-1 .card-type  { font-size: 12px; text-wrap: nowrap; overflow: hidden; }
+.carousel-card-1 .card-channel  { font-size: 12px; text-wrap: nowrap; overflow: hidden; }
+.carousel-card-1 .icon-btn {
+  color:var(--text-color);
+  font-size: 18px !important;
+}
+
 
 .audioplayer {
   display: flex ;

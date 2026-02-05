@@ -1,111 +1,93 @@
 import { create } from "zustand";
 
-// Helper functions for localStorage handling
-const getStorage = (key, defaultValue = []) => {
-    try {
-        return JSON.parse(localStorage.getItem(key)) || defaultValue;
-    } catch {
-        return defaultValue;
-    }
+// Helpers
+const read = (key) => {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : [];
 };
+const write = (key, value) => localStorage.setItem(key, JSON.stringify(value));
 
-const updateStorage = (key, value) => {
-    if (value) {
-        localStorage.setItem(key, JSON.stringify(value));
-    }
-};
+const useTrackQueue = create((set, get) => {
+    // Ensure storage keys exist
+    if (!localStorage.getItem("trackQueue")) write("trackQueue", []);
+    if (!localStorage.getItem("prevTrackQueue")) write("prevTrackQueue", []);
 
-// Load initial queue data from localStorage
-const storedTrackQueue = getStorage("trackQueue");
-const storedPrevTrackQueue = getStorage("prevTrackQueue");
+    return {
+        trackQueue: read("trackQueue"),
+        prevTrackQueue: read("prevTrackQueue"),
+        currentTrack: read("trackQueue")[0] || null,
 
-const useTrackQueue = create(set => ({
-    trackQueue: storedTrackQueue,
-    prevTrackQueue: storedPrevTrackQueue,
-    currentTrack: storedTrackQueue.length ? storedTrackQueue[0] : null,
+        setCurrentTrack: (id) =>
+            set((s) => (s.currentTrack !== id ? { currentTrack: id } : s)),
 
-    setCurrentTrack: trackId =>
-        set(state =>
-            state.currentTrack !== trackId ? { currentTrack: trackId } : state
-        ),
+        addToQueue: (id) => {
+            if (!id) return;
+            const { trackQueue, prevTrackQueue, currentTrack } = get();
 
-    addToQueue: trackId => {
-        if (!trackId) return;
-        set(state => {
-            const { trackQueue, prevTrackQueue, currentTrack } = state;
+            const newPrev = currentTrack ? [...prevTrackQueue, currentTrack] : prevTrackQueue;
+            const newQueue = [id, ...trackQueue];
 
-            const updatedPrevQueue = currentTrack
-                ? [...prevTrackQueue, currentTrack]
-                : prevTrackQueue;
-            const updatedQueue = [trackId, ...trackQueue];
+            write("trackQueue", newQueue);
+            write("prevTrackQueue", newPrev);
 
-            updateStorage("trackQueue", updatedQueue);
-            updateStorage("prevTrackQueue", updatedPrevQueue);
+            set({
+                trackQueue: newQueue,
+                prevTrackQueue: newPrev,
+                currentTrack: id
+            });
+        },
 
-            return {
-                trackQueue: updatedQueue,
-                prevTrackQueue: updatedPrevQueue,
-                currentTrack: updatedQueue[0] || currentTrack
-            };
-        });
-    },
+        addToLast: (id) => {
+            if (!id) return;
+            const newQueue = [...get().trackQueue, id];
 
-    addToLast: trackId => {
-        if (!trackId) return;
-        set(state => {
-            const updatedQueue = [...state.trackQueue, trackId];
+            write("trackQueue", newQueue);
+            set({ trackQueue: newQueue });
+        },
 
-            updateStorage("trackQueue", updatedQueue);
-            return { trackQueue: updatedQueue };
-        });
-    },
+        skipToNext: () => {
+            const { trackQueue, prevTrackQueue } = get();
+            if (!trackQueue.length) return;
 
-    skipToNext: () => {
-        set(state => {
-            const { trackQueue, prevTrackQueue } = state;
-            if (!trackQueue.length) return state;
+            const [first, ...rest] = trackQueue;
+            const newPrev = [...prevTrackQueue, first];
 
-            const updatedPrevQueue = [...prevTrackQueue, trackQueue[0]];
-            const updatedQueue = trackQueue.slice(1);
+            write("trackQueue", rest);
+            write("prevTrackQueue", newPrev);
 
-            updateStorage("prevTrackQueue", updatedPrevQueue);
-            updateStorage("trackQueue", updatedQueue);
+            set({
+                trackQueue: rest,
+                prevTrackQueue: newPrev,
+                currentTrack: rest[0] || null
+            });
+        },
 
-            return {
-                prevTrackQueue: updatedPrevQueue,
-                trackQueue: updatedQueue,
-                currentTrack: updatedQueue[0] || null
-            };
-        });
-    },
+        skipToPrevious: () => {
+            const { prevTrackQueue, trackQueue } = get();
+            if (!prevTrackQueue.length) return;
 
-    skipToPrevious: () => {
-        set(state => {
-            const { prevTrackQueue, trackQueue } = state;
-            if (!prevTrackQueue.length) return state;
+            const prev = prevTrackQueue.at(-1);
+            const newPrev = prevTrackQueue.slice(0, -1);
+            const newQueue = [prev, ...trackQueue];
 
-            const prevTrack = prevTrackQueue.at(-1);
-            const updatedPrevQueue = prevTrackQueue.slice(0, -1);
-            const updatedQueue = [prevTrack, ...trackQueue];
+            write("trackQueue", newQueue);
+            write("prevTrackQueue", newPrev);
 
-            updateStorage("prevTrackQueue", updatedPrevQueue);
-            updateStorage("trackQueue", updatedQueue);
+            set({
+                trackQueue: newQueue,
+                prevTrackQueue: newPrev,
+                currentTrack: prev
+            });
+        },
 
-            return {
-                prevTrackQueue: updatedPrevQueue,
-                trackQueue: updatedQueue,
-                currentTrack: prevTrack
-            };
-        });
-    },
-
-    clearTrackQueue: () => {
-        updateStorage("trackQueue", []);
-        set(() => ({
-            trackQueue: [],
-            currentTrack: null
-        }));
-    }
-}));
+        clearTrackQueue: () => {
+            write("trackQueue", []);
+            set({
+                trackQueue: [],
+                currentTrack: null
+            });
+        }
+    };
+});
 
 export default useTrackQueue;
