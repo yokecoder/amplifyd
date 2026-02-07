@@ -17,7 +17,7 @@ export default function Home() {
   const { data:trending,isLoading} = useQuery({
           queryKey: ["trending"],
           queryFn: async () => {
-              const res = await fetch(`${API}api/search?q=trending%20songs`);
+              const res = await fetch(`${API}api/search?q=trending movie or album songs global&type=playlist,video`);
               return res.json();
           },
           enabled: true,

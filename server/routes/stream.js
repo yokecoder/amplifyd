@@ -42,14 +42,15 @@ router.get('/info/:videoId', async (req, res) => {
 
 router.get("/search", async (req,res)=>{
   try {
-    const {q} = req.query;
+    const {q, type="video"} = req.query;
+
     const {data} = await  axios.get(
       'https://www.googleapis.com/youtube/v3/search',
       {
         params: {
           part: 'snippet',
           q: q,
-          type: 'video,playlist',
+          type: type,
           maxResults: 10,
           key: getRandomApiKey(),
         }
